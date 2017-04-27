@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">FaultAssist</string>
+    <string name="password">Password</string>
+    <string name="userID">UserID</string>
+    <string name="sign_in">Sign in</string>
+    <string name="register">Register</string>
+    <string name="password_confirm">Confirm password</string>
+    <string name="scan">Scan QRCode</string>
+</resources>
