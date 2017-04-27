@@ -1,0 +1,20 @@
+div.container6 {
+  height: 10em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+div.container6 a {
+  appearance: button;
+  margin: 30px;
+  padding : 10px;
+
+  display: block;
+  width: 150px;
+  height: 25px;
+  background: #53A3CD;
+  text-align: center;
+  border-radius: 5px;
+  color: black;
+  font-weight: bold;
+}
