@@ -1,28 +1,18 @@
 package hu.bme.iit.faultassist;
 
-import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.Intent;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.util.Log;
+import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
-
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
-
 import java.io.IOException;
-
 import okhttp3.Call;
 import okhttp3.Callback;
-import okhttp3.MediaType;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.RequestBody;
 import okhttp3.Response;
 
 public class LoginActivity extends AppCompatActivity implements Callback {
@@ -31,11 +21,6 @@ public class LoginActivity extends AppCompatActivity implements Callback {
     Button sign_in;
     Button register;
     ProgressDialog progressDialog;
-
-    MediaType JSON;
-    OkHttpClient client;
-
-    private String login_link = "http://vm.ik.bme.hu:20951/mobile_login.php";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,8 +35,7 @@ public class LoginActivity extends AppCompatActivity implements Callback {
         progressDialog = new ProgressDialog(this);
         progressDialog.setCancelable(false);
 
-        client = new OkHttpClient();
-        JSON = MediaType.parse("application/json; charset=utf-8");
+        Networking.initialize();
 
 
         sign_in.setOnClickListener(new View.OnClickListener() {
@@ -71,7 +55,7 @@ public class LoginActivity extends AppCompatActivity implements Callback {
                 try {
                     progressDialog.setMessage("Logging you in...");
                     showDialog();
-                    post(login_link, json);
+                    Networking.post(Networking.login_link, json, LoginActivity.this);
                 } catch (IOException e) {
                     hideDialog();
                     e.printStackTrace();
@@ -88,15 +72,7 @@ public class LoginActivity extends AppCompatActivity implements Callback {
         });
     }
 
-    private void post(String url, String json) throws IOException {
-        RequestBody body = RequestBody.create(JSON, json);
-        Request request = new Request.Builder()
-                .url(url)
-                .post(body)
-                .build();
-        client = new OkHttpClient();
-        client.newCall(request).enqueue(this);
-    }
+
 
     @Override
     public void onFailure(Call call, IOException e) {
@@ -112,6 +88,8 @@ public class LoginActivity extends AppCompatActivity implements Callback {
 
         if (temp.contains("Success")){
             Intent intent = new Intent(LoginActivity.this, ReportActivity.class);
+            intent.putExtra("username", userID.getText().toString());
+            intent.putExtra("password", password.getText().toString());
             startActivity(intent);
         }
     }
@@ -131,5 +109,15 @@ public class LoginActivity extends AppCompatActivity implements Callback {
                 Toast.makeText(getApplicationContext(), s, Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+    @Override
+    protected void onPause(){
+        super.onPause();
+        try{
+            password.setText("");
+        }catch (Exception e){
+            e.printStackTrace();
+        }
     }
 }
