@@ -6,6 +6,7 @@ import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
+import okhttp3.Response;
 
 public class Networking {
     public static String login_link = "http://vm.ik.bme.hu:20951/mobile_login.php";
@@ -28,5 +29,15 @@ public class Networking {
                 .build();
         Networking.client = new OkHttpClient();
         Networking.client.newCall(request).enqueue(callback);
+    }
+
+    public static Response execute(String url, String json, Callback callback) throws IOException {
+        RequestBody body = RequestBody.create(Networking.JSON, json);
+        Request request = new Request.Builder()
+                .url(url)
+                .post(body)
+                .build();
+        Networking.client = new OkHttpClient();
+        return Networking.client.newCall(request).execute();
     }
 }

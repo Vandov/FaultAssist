@@ -37,12 +37,14 @@ public class LoginActivity extends AppCompatActivity implements Callback {
 
         Networking.initialize();
 
-
         sign_in.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
 
                 JsonObject object = new JsonObject();
+
+                
+
                 JsonPrimitive username = new JsonPrimitive(userID.getText().toString());
                 JsonPrimitive pass = new JsonPrimitive(password.getText().toString());
 

@@ -7,4 +7,6 @@
     <string name="password_confirm">Confirm password</string>
     <string name="scan">Scan QRCode</string>
     <string name="proceed">Proceed</string>
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
 </resources>
