@@ -43,8 +43,6 @@ public class LoginActivity extends AppCompatActivity implements Callback {
 
                 JsonObject object = new JsonObject();
 
-                
-
                 JsonPrimitive username = new JsonPrimitive(userID.getText().toString());
                 JsonPrimitive pass = new JsonPrimitive(password.getText().toString());
 

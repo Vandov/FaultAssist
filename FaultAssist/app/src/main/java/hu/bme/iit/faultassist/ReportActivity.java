@@ -34,27 +34,31 @@ public class ReportActivity extends AppCompatActivity implements ZXingScannerVie
     Button proceed;
     TextView textView;
     String text;
-    ReportRegister reportRegister;
+    static ReportRegister reportRegister;
     ProgressDialog progressDialog;
 
-    JsonPrimitive username;
-    JsonPrimitive pass;
-    JsonPrimitive command;
-    JsonPrimitive table;
-    JsonPrimitive values;
-    JsonPrimitive selection;
-    JsonPrimitive specification;
+    static JsonPrimitive username;
+    static JsonPrimitive pass;
+    static JsonPrimitive command;
+    static JsonPrimitive table;
+    static JsonPrimitive values;
+    static JsonPrimitive selection;
+    static JsonPrimitive specification;
 
     String json;
+    static JsonObject jobj;
 
-    List<String> fields;
-    String[] machines = {"type"};
-    String[] issues = {"id", "cause", "status"};
-    String[] questions = {"id", "question", "question_type", "expected", "value_type", "interval_bottom", "interval_top", "leaf_solution"};
-    private String machineType;
+    static List<String> fields;
+    static String[] machines = {"type"};
+    static String[] issues = {"id", "cause", "status"};
+    static String[] questions = {"id", "question", "question_type", "expected", "value_type", "interval_bottom", "interval_top", "leaf_solution"};
+    static String machineType;
     private String currentNodeID;
     private boolean solved = false;
     List<ReturnValues> list;
+    static int questionNum = 0;
+    static int requestNum = 0;
+    static int question_helper_num = 1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -118,14 +122,14 @@ public class ReportActivity extends AppCompatActivity implements ZXingScannerVie
         });
     }
 
-    private void updateFields(String[] strings) {
+    public static void updateFields(String[] strings) {
         fields = new ArrayList<>();
         for (int i = 0; i < strings.length; i++) {
             fields.add(strings[i]);
         }
     }
 
-    private String SQL(String mCommand, String mTable, String mValues, String mSelection, String mSpecification) {
+    public static String SQL(String mCommand, String mTable, String mValues, String mSelection, String mSpecification) {
 
         command = new JsonPrimitive(mCommand);
         table = new JsonPrimitive(mTable);
@@ -144,13 +148,15 @@ public class ReportActivity extends AppCompatActivity implements ZXingScannerVie
         object.add("selection", selection);
         object.add("specification", specification);
 
+        jobj = object;
+
         return object.toString();
     }
 
     @Override
     public void handleResult(Result result) {
-        text = "'" + result.getText().toString() + "' machine recognised. If that's correct please proceed with your report.";
-        specification = new JsonPrimitive(result.getText().toString());
+        text = "'" + result.getText() + "' machine recognised. If that's correct please proceed with your report.";
+        specification = new JsonPrimitive(result.getText());
         scannerView.stopCamera();
         setContentView(R.layout.activity_report);
         config();
@@ -181,6 +187,8 @@ public class ReportActivity extends AppCompatActivity implements ZXingScannerVie
 
         JSONArray Jarray = null;
         list = new ArrayList<>();
+        String question_type = "";
+        String question_found = "";
 
         try {
             Jarray = new JSONArray(jsonData);
@@ -189,45 +197,67 @@ public class ReportActivity extends AppCompatActivity implements ZXingScannerVie
         }
 
         if (Jarray != null) {
-            for (int i = 0; i < Jarray.length(); i++)
+            for (int i = 0; i < Jarray.length(); i++) {
                 try {
 
+                    ReturnValues values = new ReturnValues();
+
                     for (int j = 0; j < fields.size(); j++) {
-                        ReturnValues values = new ReturnValues();
-                        values.add(fields.get(j), Jarray.getJSONObject(j).get(fields.get(j)).toString());
-                        list.add(values);
-                        if (fields.get(j).equals("type") && reportRegister.isEmpty())
-                            machineType = Jarray.getJSONObject(j).getString("type");
+                        values.add(fields.get(j), Jarray.getJSONObject(i).get(fields.get(j)).toString());
+                        if (fields.get(j).equals("type") && reportRegister.isEmpty()) {
+                            machineType = Jarray.getJSONObject(i).getString("type");
+                        }
+                        if (fields.get(j).equals("id")) {
+                            currentNodeID = Jarray.getJSONObject(i).getString("id");
+                        }
+                        if (fields.get(j).equals("question_type")) {
+                            question_type = Jarray.getJSONObject(i).getString("question_type");
+                        }
+                        if (fields.get(j).equals("question")) {
+                            question_found = Jarray.getJSONObject(i).getString("question");
+                        }
                     }
+                    list.add(values);
 
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
-            if (!solved && reportRegister.isEmpty()) nextStep();
+            }
+
+            requestNum++;
+            System.out.println(Jarray.toString());
+            System.out.println(requestNum);
+
+            if (!solved) {
+                String name = "";
+                String type = question_type;
+                String question = question_found;
+
+                if (requestNum % 2 == 0 && requestNum > 2) {
+                    try {
+                        type = Jarray.getJSONObject(0).getString("question_type");
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+                String[] s = nextStep(name, type, question);
+
+                name = s[0];
+                type = s[1];
+                question = s[2];
+
+                if (!reportRegister.isEmpty() && requestNum % 2 == 0) {
+                    displayDialog(name, type, question);
+                    report(json, type, jobj);
+                } else if (reportRegister.isEmpty()) {
+                    report(json, "head", jobj);
+                }
+            }
         }
     }
 
-    private void nextStep() {
-
-        String name = "";
-        String type = "";
-        String question = "";
-
-        if (reportRegister.isEmpty()) {
-            updateFields(issues);
-            json = SQL("select", machineType + "_ISSUES", "", "id, cause, status", "(id REGEXP '[0-9].[_]')");//"id, cause, status", "status='Active'"
-            try {
-                Networking.post(Networking.query_link, json, ReportActivity.this);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            report(json, "pick");
-            name = "Pick the reported issue";
-            type = "pick";
-        } else {
-
-        }
-
+    private void displayDialog(String name, String type, String question) {
         FragmentTransaction ft = getFragmentManager().beginTransaction();
         Fragment prev = getFragmentManager().findFragmentByTag("dialog");
         if (prev != null) {
@@ -237,6 +267,40 @@ public class ReportActivity extends AppCompatActivity implements ZXingScannerVie
 
         DialogFragment dialog = ReportDialog.newInstance(name, type, question, list);
         dialog.show(ft, "dialog");
+    }
+
+    private String[] nextStep(String name, String type, String question) {
+
+        if (reportRegister.isEmpty()) {
+            updateFields(issues);
+            json = SQL("select", machineType + "_ISSUES", "", "*", "status = 'Active' AND (id NOT REGEXP '[0-9]+[_]')");
+            try {
+                Networking.post(Networking.query_link, json, ReportActivity.this);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        } else if (reportRegister.events.size() == 1) {
+            name = "Pick the reported issue";
+            type = "pick";
+            questionNum = 0;
+        } else if (requestNum % 2 == 1) {
+
+            updateFields(questions);
+            String temp = "id = '" + currentNodeID + "'";
+
+            json = SQL("select", machineType + "_QUESTIONS", "", "*", temp);
+            System.out.println(json);
+            try {
+                Networking.post(Networking.query_link, json, ReportActivity.this);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            questionNum++;
+        } else {
+            name = "Question " + questionNum;
+        }
+        String[] s = {name, type, question};
+        return s;
     }
 
     private void showDialog() {
@@ -257,10 +321,20 @@ public class ReportActivity extends AppCompatActivity implements ZXingScannerVie
         });
     }
 
-    private void report(String json, String type) {
+    private void report(String json, String type, JsonObject jobj) {
         ReportEvent event = new ReportEvent();
         event.json = json;
         event.type = type;
+        event.jobj = jobj;
         reportRegister.push(event);
+    }
+
+    public static void resendLastRequest(ReportActivity activity) {
+        String prev = reportRegister.events.get(reportRegister.events.size()-1).json;
+        try {
+            Networking.post(Networking.query_link, prev, activity);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

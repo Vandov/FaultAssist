@@ -1,8 +1,6 @@
 package hu.bme.iit.faultassist;
 
-import com.google.zxing.Result;
-
-import okhttp3.Response;
+import com.google.gson.JsonObject;
 
 public class ReportEvent {
     String json;
@@ -10,4 +8,5 @@ public class ReportEvent {
     String question_id;
     String begining_answer;
     String answer;
+    JsonObject jobj;
 }
