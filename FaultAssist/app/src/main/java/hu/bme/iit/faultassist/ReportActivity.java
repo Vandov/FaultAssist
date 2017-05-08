@@ -19,14 +19,19 @@ import android.widget.Toast;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import com.google.zxing.Result;
+import com.google.zxing.common.StringUtils;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.net.URLDecoder;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class ReportActivity extends AppCompatActivity implements ZXingScannerView.ResultHandler, Callback {
     private ZXingScannerView scannerView;
@@ -52,13 +57,34 @@ public class ReportActivity extends AppCompatActivity implements ZXingScannerVie
     static String[] machines = {"type"};
     static String[] issues = {"id", "cause", "status"};
     static String[] questions = {"id", "question", "question_type", "expected", "value_type", "interval_bottom", "interval_top", "leaf_solution"};
-    static String machineType;
-    private String currentNodeID;
+
     private boolean solved = false;
-    List<ReturnValues> list;
-    static int questionNum = 0;
+    //List<ReturnValues> list;
+
     static int requestNum = 0;
     static int question_helper_num = 1;
+
+    /**********************************************/
+    List<IssuesList> responseLists = new ArrayList<>();
+    static QuestionsList questionList = new QuestionsList();
+    private String machineID = "";
+    private String machineType = "";
+    static String currentID = "";
+    private String headID = "";
+    private String issuesSelection = "id, cause, status";
+    private String questionSelection = "id, question, question_type, expected, value_type, interval_bottom, interval_top, leaf_solution";
+    static int questionNum = 0;
+
+    private enum State {
+        INITIAL,
+        TYPE,
+        HEADS,
+        ISSUES,
+        QUESTION,
+    }
+
+    public static State state;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -83,6 +109,8 @@ public class ReportActivity extends AppCompatActivity implements ZXingScannerVie
 
         reportRegister = new ReportRegister();
 
+        state = State.INITIAL;
+
         scan.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -97,24 +125,7 @@ public class ReportActivity extends AppCompatActivity implements ZXingScannerVie
             @Override
             public void onClick(View v) {
                 if (text != null) {
-
-                    json = SQL("select", "machines", "", "type", "1");
-
-                    try {
-                        if (reportRegister.isEmpty()) {
-                            progressDialog.setMessage("Loading");
-                            showDialog();
-
-                            machineType = "";
-                            currentNodeID = "";
-                            updateFields(machines);
-
-                            Networking.post(Networking.query_link, json, ReportActivity.this);
-                        }
-
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
+                    nextStep();
                 } else {
                     toast("Please scan the QR code of the machine before continuing");
                 }
@@ -149,13 +160,14 @@ public class ReportActivity extends AppCompatActivity implements ZXingScannerVie
         object.add("specification", specification);
 
         jobj = object;
-
+        System.out.println(jobj.toString());
         return object.toString();
     }
 
     @Override
     public void handleResult(Result result) {
-        text = "'" + result.getText() + "' machine recognised. If that's correct please proceed with your report.";
+        machineID = result.getText();
+        text = "'" + machineID + "' machine recognised. If that's correct please proceed with your report.";
         specification = new JsonPrimitive(result.getText());
         scannerView.stopCamera();
         setContentView(R.layout.activity_report);
@@ -186,78 +198,224 @@ public class ReportActivity extends AppCompatActivity implements ZXingScannerVie
         String jsonData = URLDecoder.decode(response.body().string(), "UTF-8");
 
         JSONArray Jarray = null;
-        list = new ArrayList<>();
-        String question_type = "";
-        String question_found = "";
 
         try {
             Jarray = new JSONArray(jsonData);
+            System.out.println(Jarray.toString());
         } catch (JSONException e) {
             e.printStackTrace();
         }
 
-        if (Jarray != null) {
-            for (int i = 0; i < Jarray.length(); i++) {
-                try {
+        if (state == State.ISSUES) {
+            IssuesList list = new IssuesList();
 
-                    ReturnValues values = new ReturnValues();
-
-                    for (int j = 0; j < fields.size(); j++) {
-                        values.add(fields.get(j), Jarray.getJSONObject(i).get(fields.get(j)).toString());
-                        if (fields.get(j).equals("type") && reportRegister.isEmpty()) {
-                            machineType = Jarray.getJSONObject(i).getString("type");
-                        }
-                        if (fields.get(j).equals("id")) {
-                            currentNodeID = Jarray.getJSONObject(i).getString("id");
-                        }
-                        if (fields.get(j).equals("question_type")) {
-                            question_type = Jarray.getJSONObject(i).getString("question_type");
-                        }
-                        if (fields.get(j).equals("question")) {
-                            question_found = Jarray.getJSONObject(i).getString("question");
-                        }
-                    }
-                    list.add(values);
-
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-            }
-
-            requestNum++;
-            System.out.println(Jarray.toString());
-            System.out.println(requestNum);
-
-            if (!solved) {
-                String name = "";
-                String type = question_type;
-                String question = question_found;
-
-                if (requestNum % 2 == 0 && requestNum > 2) {
+            if (Jarray != null) {
+                for (int i = 0; i < Jarray.length(); i++) {
                     try {
-                        type = Jarray.getJSONObject(0).getString("question_type");
+                        list.add(Jarray.getJSONObject(i).get("id").toString(), Jarray.getJSONObject(i).getString("cause").toString());
                     } catch (JSONException e) {
                         e.printStackTrace();
                     }
                 }
 
-                String[] s = nextStep(name, type, question);
+                responseLists.add(0, list);
+            }
+        } else if (state == State.TYPE) {
+            if (Jarray != null) {
+                try {
+                    machineType = Jarray.getJSONObject(0).get("type").toString();
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+        } else if (state == State.HEADS) {
+            List<ReturnValues> list = new ArrayList<>();
 
-                name = s[0];
-                type = s[1];
-                question = s[2];
+            if (Jarray != null) {
+                for (int i = 0; i < Jarray.length(); i++) {
+                    try {
+                        ReturnValues values = new ReturnValues();
+                        values.add("cause", Jarray.getJSONObject(i).get("cause").toString());
+                        values.add("id", Jarray.getJSONObject(i).get("id").toString());
+                        list.add(values);
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
 
-                if (!reportRegister.isEmpty() && requestNum % 2 == 0) {
-                    displayDialog(name, type, question);
-                    report(json, type, jobj);
-                } else if (reportRegister.isEmpty()) {
-                    report(json, "head", jobj);
+            displayDialog("Pick reported issue", "pick", "", list);
+        } else if (state == State.QUESTION) {
+            if (Jarray != null) {
+                try {
+
+                    questionList.add(Jarray.getJSONObject(0).get("id").toString(),
+                            Jarray.getJSONObject(0).get("question_type").toString(),
+                            Jarray.getJSONObject(0).get("question").toString(),
+                            Jarray.getJSONObject(0).get("expected").toString(),
+                            Jarray.getJSONObject(0).get("interval_top").toString(),
+                            Jarray.getJSONObject(0).get("interval_bottom").toString(),
+                            Jarray.getJSONObject(0).get("leaf_solution").toString(),
+                            Jarray.getJSONObject(0).get("value_type").toString());
+
+
+                } catch (JSONException e) {
+                    e.printStackTrace();
                 }
             }
         }
+
+
+        nextStep();
     }
 
-    private void displayDialog(String name, String type, String question) {
+    private void nextStep() {
+        System.out.println(state);
+        switch (state) {
+            case INITIAL:
+                try {
+                    state = State.TYPE;
+                    Networking.post(Networking.query_link, SQL("select", "machines", "", "type", "id = '" + machineID + "'"), this);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                break;
+            case TYPE:
+                try {
+                    state = State.HEADS;
+                    Networking.post(Networking.query_link, SQL("select", machineType + "_ISSUES", "", issuesSelection, "status = 'Active' AND " + generateSelectID()), this);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                break;
+            case HEADS:
+                state = State.ISSUES;
+                break;
+            case ISSUES:
+                state = State.QUESTION;
+                questionNum = 1;
+                getNextQuestion();
+                break;
+            case QUESTION:
+                askQuestion();
+                break;
+        }
+    }
+
+    public void answerProcessBoolean(boolean bool) {
+        questionList.get(questionNum - 1).answer = questionList.get(questionNum - 1).expected;
+        if (bool) {
+            moveForward();
+        } else {
+            moveSide();
+        }
+    }
+
+    public void answerProcessNumber(boolean bool, String number) {
+        questionList.get(questionNum - 1).answer = number;
+        if (bool) {
+            moveForward();
+        } else {
+            moveSide();
+        }
+    }
+
+    private void moveForward() {
+        if (questionList.get(questionNum - 1).solution.length() > 0) {
+            /**** give solution ***/
+        }
+        currentID = questionList.get(questionNum - 1).id;
+        questionNum++;
+        getNextQuestion();
+    }
+
+    private void moveSide() {
+        questionNum++;
+        getNextQuestion();
+    }
+
+    private void moveBack() {
+        rollBackID();
+        questionNum++;
+
+    }
+
+    /****
+     * TEST
+     ****/
+    private void rollBackID() {
+        String[] s = currentID.split("_");
+        Arrays.copyOf(s, s.length - 1);
+        for (int i = 0; i < s.length - 2; i++) {
+            s[i] = s[i] + "_";
+        }
+
+    }
+
+    private void askQuestion() {
+        QuestionElement question = questionList.get(questionNum - 1);
+        displayDialog("Question " + questionNum + ":", question.type, question.question, null);
+    }
+
+    private String generateSelectID() {
+        if (state == State.HEADS) {
+            return "(id NOT REGEXP '[0-9]+[_]')";
+        } else if (state == State.ISSUES) {
+            return "(id REGEXP '" + currentID + "[_]')";
+        } else {
+            return null;
+        }
+    }
+
+    private void getNextQuestion() {
+        int pos = getQuestionPos(getNextRegex());
+        if (pos >= 0) {
+            IssueElement element = responseLists.get(0).elements.get(pos);
+            try {
+                Networking.post(Networking.query_link, SQL("select", machineType + "_QUESTIONS", "", questionSelection, "id = '" + element.id + "'"), this);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        } else if (currentID != machineID) {
+            moveBack();
+        } else {
+            toast("ENDING: call for help");
+        }
+    }
+
+    private int getQuestionPos(String regex) {
+        Pattern p = Pattern.compile(regex);
+        for (int i = 0; i < responseLists.get(0).elements.size(); i++) {
+            if (!responseLists.get(0).elements.get(i).visited) {
+                Matcher m = p.matcher(responseLists.get(0).elements.get(i).id);
+                System.out.println(responseLists.get(0).elements.get(i).id);
+                if (m.find()) {
+                    currentID = responseLists.get(0).elements.get(i).id;
+                    responseLists.get(0).elements.get(i).visited = true;
+                    System.out.println("match");
+                    return i;
+                }
+            }
+        }
+        return -1;
+    }
+
+    private String getNextRegex() {
+        String regex = "\\A" + currentID + "[_][0-9]+\\z";
+        return regex;
+    }
+
+    public void picked(String id) {
+        currentID = id;
+        headID = id;
+        try {
+            Networking.post(Networking.query_link, SQL("select", machineType + "_ISSUES", "", issuesSelection, "status = 'Active' AND " + generateSelectID()), this);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void displayDialog(String name, String type, String question, List list) {
         FragmentTransaction ft = getFragmentManager().beginTransaction();
         Fragment prev = getFragmentManager().findFragmentByTag("dialog");
         if (prev != null) {
@@ -267,40 +425,6 @@ public class ReportActivity extends AppCompatActivity implements ZXingScannerVie
 
         DialogFragment dialog = ReportDialog.newInstance(name, type, question, list);
         dialog.show(ft, "dialog");
-    }
-
-    private String[] nextStep(String name, String type, String question) {
-
-        if (reportRegister.isEmpty()) {
-            updateFields(issues);
-            json = SQL("select", machineType + "_ISSUES", "", "*", "status = 'Active' AND (id NOT REGEXP '[0-9]+[_]')");
-            try {
-                Networking.post(Networking.query_link, json, ReportActivity.this);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        } else if (reportRegister.events.size() == 1) {
-            name = "Pick the reported issue";
-            type = "pick";
-            questionNum = 0;
-        } else if (requestNum % 2 == 1) {
-
-            updateFields(questions);
-            String temp = "id = '" + currentNodeID + "'";
-
-            json = SQL("select", machineType + "_QUESTIONS", "", "*", temp);
-            System.out.println(json);
-            try {
-                Networking.post(Networking.query_link, json, ReportActivity.this);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            questionNum++;
-        } else {
-            name = "Question " + questionNum;
-        }
-        String[] s = {name, type, question};
-        return s;
     }
 
     private void showDialog() {
@@ -330,7 +454,7 @@ public class ReportActivity extends AppCompatActivity implements ZXingScannerVie
     }
 
     public static void resendLastRequest(ReportActivity activity) {
-        String prev = reportRegister.events.get(reportRegister.events.size()-1).json;
+        String prev = reportRegister.events.get(reportRegister.events.size() - 1).json;
         try {
             Networking.post(Networking.query_link, prev, activity);
         } catch (IOException e) {

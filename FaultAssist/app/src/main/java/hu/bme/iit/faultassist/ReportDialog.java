@@ -1,21 +1,18 @@
 package hu.bme.iit.faultassist;
 
 import android.app.Dialog;
-import android.content.DialogInterface;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.app.DialogFragment;
 import android.support.v7.app.AlertDialog;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
 import android.widget.TextView;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -62,22 +59,7 @@ public class ReportDialog extends DialogFragment {
                 @Override
                 public void onItemClick(AdapterView<?> parent, final View view,
                                         int position, long id) {
-                    final String item = (String) parent.getItemAtPosition(position);
-
-
-                    try {
-                        ReportActivity.updateFields(ReportActivity.issues);
-                        String spec;
-
-
-                        spec = "status = 'Active' AND (id NOT REGEXP '[0-9]+[_][0-9]+[_]') AND (id REGEXP '[0-9]+[_]') ORDER BY id";
-
-                        String json = ReportActivity.SQL("select", ReportActivity.machineType + "_ISSUES", "", "id, cause, status", spec);
-                        Networking.post(Networking.query_link, json, (ReportActivity) getActivity());
-
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
+                    ((ReportActivity) getActivity()).picked(issues.get(position).get("id"));
                 }
 
             });
@@ -94,14 +76,10 @@ public class ReportDialog extends DialogFragment {
             no_btn.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-
-                    try {
-                        String spec;
-                        spec = "status = 'Active' AND (id NOT REGEXP '[0-9]+[_][0-9]+[_]') AND (id REGEXP '[0-9]+[_]') ORDER BY id LIMIT " + ReportActivity.question_helper_num + "-1,1";
-                        String json = ReportActivity.SQL("select", ReportActivity.machineType + "_ISSUES", "", "id, cause, status", spec);
-                        Networking.post(Networking.query_link, json, (ReportActivity) getActivity());
-                    } catch (IOException e) {
-                        e.printStackTrace();
+                    if (ReportActivity.questionList.get(ReportActivity.questionNum-1).expected.trim().equalsIgnoreCase("nem")){
+                        ((ReportActivity)getActivity()).answerProcessBoolean(true);
+                    }else{
+                        ((ReportActivity)getActivity()).answerProcessBoolean(false);
                     }
                 }
             });
@@ -109,17 +87,10 @@ public class ReportDialog extends DialogFragment {
             yes_btn.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-
-                    try {
-                        ReportActivity.question_helper_num++;
-                        System.out.println(ReportActivity.question_helper_num);
-                        String spec;
-                        spec = "status = 'Active' AND (id NOT REGEXP '[0-9]+[_][0-9]+[_]') AND (id REGEXP '[0-9]+[_]') ORDER BY id LIMIT " + ReportActivity.question_helper_num + "-1,1";
-                        System.out.println(spec);
-                        String json = ReportActivity.SQL("select", ReportActivity.machineType + "_ISSUES", "", "id, cause, status", spec);
-                        Networking.post(Networking.query_link, json, (ReportActivity) getActivity());
-                    } catch (IOException e) {
-                        e.printStackTrace();
+                    if (ReportActivity.questionList.get(ReportActivity.questionNum-1).expected.trim().equalsIgnoreCase("igen")){
+                        ((ReportActivity)getActivity()).answerProcessBoolean(true);
+                    }else{
+                        ((ReportActivity)getActivity()).answerProcessBoolean(false);
                     }
                 }
             });
