@@ -9,4 +9,7 @@
     <string name="proceed">Proceed</string>
     <string name="yes">Yes</string>
     <string name="no">No</string>
+    <string name="ask_if_solved">Did this solve the problem?</string>
+    <string name="thanks">Thank you for using our app. We are glad we could help with your work. To upload your report click the button below.</string>
+    <string name="close">Close</string>
 </resources>

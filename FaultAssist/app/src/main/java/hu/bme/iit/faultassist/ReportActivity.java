@@ -5,11 +5,14 @@ import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.Response;
 
-import android.app.Fragment;
-import android.app.FragmentTransaction;
+
 import android.app.ProgressDialog;
 import android.os.Bundle;
-import android.app.DialogFragment;
+
+import android.support.v4.app.DialogFragment;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentManager;
+import android.support.v4.app.FragmentTransaction;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.Button;
@@ -19,13 +22,11 @@ import android.widget.Toast;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import com.google.zxing.Result;
-import com.google.zxing.common.StringUtils;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 
 import java.io.IOException;
-import java.lang.reflect.Array;
 import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -50,22 +51,9 @@ public class ReportActivity extends AppCompatActivity implements ZXingScannerVie
     static JsonPrimitive selection;
     static JsonPrimitive specification;
 
-    String json;
     static JsonObject jobj;
 
-    static List<String> fields;
-    static String[] machines = {"type"};
-    static String[] issues = {"id", "cause", "status"};
-    static String[] questions = {"id", "question", "question_type", "expected", "value_type", "interval_bottom", "interval_top", "leaf_solution"};
-
-    private boolean solved = false;
-    //List<ReturnValues> list;
-
-    static int requestNum = 0;
-    static int question_helper_num = 1;
-
-    /**********************************************/
-    List<IssuesList> responseLists = new ArrayList<>();
+    static List<IssuesList> responseLists = new ArrayList<>();
     static QuestionsList questionList = new QuestionsList();
     private String machineID = "";
     private String machineType = "";
@@ -75,12 +63,13 @@ public class ReportActivity extends AppCompatActivity implements ZXingScannerVie
     private String questionSelection = "id, question, question_type, expected, value_type, interval_bottom, interval_top, leaf_solution";
     static int questionNum = 0;
 
-    private enum State {
+    public enum State {
         INITIAL,
         TYPE,
         HEADS,
         ISSUES,
         QUESTION,
+        SUGGESTION
     }
 
     public static State state;
@@ -131,13 +120,6 @@ public class ReportActivity extends AppCompatActivity implements ZXingScannerVie
                 }
             }
         });
-    }
-
-    public static void updateFields(String[] strings) {
-        fields = new ArrayList<>();
-        for (int i = 0; i < strings.length; i++) {
-            fields.add(strings[i]);
-        }
     }
 
     public static String SQL(String mCommand, String mTable, String mValues, String mSelection, String mSpecification) {
@@ -212,7 +194,7 @@ public class ReportActivity extends AppCompatActivity implements ZXingScannerVie
             if (Jarray != null) {
                 for (int i = 0; i < Jarray.length(); i++) {
                     try {
-                        list.add(Jarray.getJSONObject(i).get("id").toString(), Jarray.getJSONObject(i).getString("cause").toString());
+                        list.add(Jarray.getJSONObject(i).get("id").toString(), Jarray.getJSONObject(i).get("cause").toString());
                     } catch (JSONException e) {
                         e.printStackTrace();
                     }
@@ -299,7 +281,15 @@ public class ReportActivity extends AppCompatActivity implements ZXingScannerVie
             case QUESTION:
                 askQuestion();
                 break;
+            case SUGGESTION:
+                showSuggestion();
+                break;
         }
+    }
+
+    private void showSuggestion() {
+        QuestionElement question = questionList.get(questionNum - 1);
+        displayDialog("Suggestion", "suggestion", question.solution, null);
     }
 
     public void answerProcessBoolean(boolean bool) {
@@ -307,6 +297,21 @@ public class ReportActivity extends AppCompatActivity implements ZXingScannerVie
         if (bool) {
             moveForward();
         } else {
+            moveSide();
+        }
+    }
+
+    public void solved(boolean b) {
+        if (b) {
+            String name = "";
+            for (int i = 0; i < responseLists.get(0).elements.size(); i++) {
+                if (questionList.get(ReportActivity.questionNum - 1).id.equals(responseLists.get(0).elements.get(i).id)) {
+                    name = responseLists.get(0).elements.get(i).cause;
+                }
+            }
+            displayDialog("Solved Issue", "solved", name, null);
+        } else {
+            state=State.QUESTION;
             moveSide();
         }
     }
@@ -322,34 +327,39 @@ public class ReportActivity extends AppCompatActivity implements ZXingScannerVie
 
     private void moveForward() {
         if (questionList.get(questionNum - 1).solution.length() > 0) {
-            /**** give solution ***/
+            state=State.SUGGESTION;
+            nextStep();
+        } else {
+            currentID = questionList.get(questionNum - 1).id;
+            questionNum++;
+            getNextQuestion();
         }
-        currentID = questionList.get(questionNum - 1).id;
-        questionNum++;
-        getNextQuestion();
     }
 
     private void moveSide() {
+        rollBackID();
         questionNum++;
         getNextQuestion();
     }
 
     private void moveBack() {
         rollBackID();
-        questionNum++;
-
+        getNextQuestion();
     }
 
-    /****
-     * TEST
-     ****/
     private void rollBackID() {
         String[] s = currentID.split("_");
-        Arrays.copyOf(s, s.length - 1);
-        for (int i = 0; i < s.length - 2; i++) {
-            s[i] = s[i] + "_";
+        StringBuilder builder = new StringBuilder();
+        s = Arrays.copyOf(s, s.length - 1);
+        if (s.length > 0) {
+            for (int i = 0; i < s.length; i++) {
+                builder.append(s[i]);
+                if (i < s.length - 1) {
+                    builder.append("_");
+                }
+            }
+            currentID = builder.toString();
         }
-
     }
 
     private void askQuestion() {
@@ -376,10 +386,10 @@ public class ReportActivity extends AppCompatActivity implements ZXingScannerVie
             } catch (IOException e) {
                 e.printStackTrace();
             }
-        } else if (currentID != machineID) {
+        } else if (!currentID.equals(headID)) {
             moveBack();
         } else {
-            toast("ENDING: call for help");
+            System.out.println("ENDING: call for help!");
         }
     }
 
@@ -401,8 +411,7 @@ public class ReportActivity extends AppCompatActivity implements ZXingScannerVie
     }
 
     private String getNextRegex() {
-        String regex = "\\A" + currentID + "[_][0-9]+\\z";
-        return regex;
+        return "\\A" + currentID + "[_][0-9]+\\z";
     }
 
     public void picked(String id) {
@@ -415,18 +424,19 @@ public class ReportActivity extends AppCompatActivity implements ZXingScannerVie
         }
     }
 
-    private void displayDialog(String name, String type, String question, List list) {
-        FragmentTransaction ft = getFragmentManager().beginTransaction();
-        Fragment prev = getFragmentManager().findFragmentByTag("dialog");
+    private void displayDialog(String name, String type, String text, List list) {
+        FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
+        Fragment prev = getSupportFragmentManager().findFragmentByTag("dialog");
         if (prev != null) {
             ft.remove(prev);
         }
         ft.addToBackStack(null);
 
-        DialogFragment dialog = ReportDialog.newInstance(name, type, question, list);
-        dialog.show(ft, "dialog");
+        DialogFragment dialog = ReportDialog.newInstance(name, type, text, list);
+        dialog.show(getSupportFragmentManager(), "dialog");
     }
 
+    /*************************************************************************************************************MAYBE IMPLEMENT****/
     private void showDialog() {
         if (!progressDialog.isShowing())
             progressDialog.show();
@@ -453,12 +463,26 @@ public class ReportActivity extends AppCompatActivity implements ZXingScannerVie
         reportRegister.push(event);
     }
 
-    public static void resendLastRequest(ReportActivity activity) {
-        String prev = reportRegister.events.get(reportRegister.events.size() - 1).json;
-        try {
-            Networking.post(Networking.query_link, prev, activity);
-        } catch (IOException e) {
-            e.printStackTrace();
+    public static void dismissAllDialogs(FragmentManager manager) {
+        List<Fragment> fragments = manager.getFragments();
+
+        if (fragments == null)
+            return;
+
+        for (Fragment fragment : fragments) {
+            if (fragment instanceof DialogFragment) {
+                DialogFragment dialogFragment = (DialogFragment) fragment;
+                dialogFragment.dismissAllowingStateLoss();
+            }
+
+            FragmentManager childFragmentManager = fragment.getChildFragmentManager();
+            if (childFragmentManager != null)
+                dismissAllDialogs(childFragmentManager);
         }
+
+        ReportActivity.questionList.elements.clear();
+        ReportActivity.responseLists.clear();
+        ReportActivity.questionNum = 0;
+        ReportActivity.state = State.INITIAL;
     }
 }

@@ -3,7 +3,8 @@ package hu.bme.iit.faultassist;
 import android.app.Dialog;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
-import android.app.DialogFragment;
+
+import android.support.v4.app.DialogFragment;
 import android.support.v7.app.AlertDialog;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -19,16 +20,16 @@ import java.util.List;
 public class ReportDialog extends DialogFragment {
 
     String name;
-    String question;
+    String text;
     String type;
     ListView listView;
     List<ReturnValues> issues;
 
 
-    static ReportDialog newInstance(String name, String type, String question, List<ReturnValues> list) {
+    static ReportDialog newInstance(String name, String type, String text, List<ReturnValues> list) {
         ReportDialog f = new ReportDialog();
         f.name = name;
-        f.question = question;
+        f.text = text;
         f.type = type;
         f.issues = list;
         return f;
@@ -40,7 +41,7 @@ public class ReportDialog extends DialogFragment {
         AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
         LayoutInflater inflater = getActivity().getLayoutInflater();
 
-        if (type == "pick") {
+        if (type.trim().equalsIgnoreCase("pick")) {
             View v = getActivity().getLayoutInflater().inflate(R.layout.dialog_report_pick, null);
             builder.setView(v);
             listView = (ListView) v.findViewById(R.id.issues_list_view);
@@ -72,14 +73,14 @@ public class ReportDialog extends DialogFragment {
             Button no_btn = (Button) v.findViewById(R.id.no_btn_report_dialog);
             Button yes_btn = (Button) v.findViewById(R.id.yes_btn_report_dialog);
 
-            text_view.setText(question);
+            text_view.setText(text);
             no_btn.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    if (ReportActivity.questionList.get(ReportActivity.questionNum-1).expected.trim().equalsIgnoreCase("nem")){
-                        ((ReportActivity)getActivity()).answerProcessBoolean(true);
-                    }else{
-                        ((ReportActivity)getActivity()).answerProcessBoolean(false);
+                    if (ReportActivity.questionList.get(ReportActivity.questionNum - 1).expected.trim().equalsIgnoreCase("nem")) {
+                        ((ReportActivity) getActivity()).answerProcessBoolean(true);
+                    } else {
+                        ((ReportActivity) getActivity()).answerProcessBoolean(false);
                     }
                 }
             });
@@ -87,29 +88,90 @@ public class ReportDialog extends DialogFragment {
             yes_btn.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    if (ReportActivity.questionList.get(ReportActivity.questionNum-1).expected.trim().equalsIgnoreCase("igen")){
-                        ((ReportActivity)getActivity()).answerProcessBoolean(true);
-                    }else{
-                        ((ReportActivity)getActivity()).answerProcessBoolean(false);
+                    if (ReportActivity.questionList.get(ReportActivity.questionNum - 1).expected.trim().equalsIgnoreCase("igen")) {
+                        ((ReportActivity) getActivity()).answerProcessBoolean(true);
+                    } else {
+                        ((ReportActivity) getActivity()).answerProcessBoolean(false);
                     }
                 }
             });
-        } else {
+        } else if (type.trim().equalsIgnoreCase("number")) {
             View v = getActivity().getLayoutInflater().inflate(R.layout.dialog_report_number, null);
-            builder.setView(inflater.inflate(R.layout.dialog_report_number, null));
+            builder.setView(v);
+        } else if (type.trim().equalsIgnoreCase("suggestion")) {
+            View v = getActivity().getLayoutInflater().inflate(R.layout.dialog_report_suggestion, null);
+            builder.setView(v);
+
+            TextView text_view = (TextView) v.findViewById(R.id.text_view_report);
+            Button no_btn = (Button) v.findViewById(R.id.no_btn_report_dialog);
+            Button yes_btn = (Button) v.findViewById(R.id.yes_btn_report_dialog);
+
+            text_view.setText(text);
+            no_btn.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    ((ReportActivity) getActivity()).solved(false);
+                }
+            });
+
+            yes_btn.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    ((ReportActivity) getActivity()).solved(true);
+                }
+            });
+        } else if (type.trim().equalsIgnoreCase("solved")) {
+            View v = getActivity().getLayoutInflater().inflate(R.layout.dialog_report_solved, null);
+            builder.setView(v);
+            Button close_btn = (Button) v.findViewById(R.id.close_btn_report_dialog);
+            TextView textView = (TextView) v.findViewById(R.id.text_view_solved);
+            textView.setText(text);
+
+            close_btn.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    /************************************************************************************CALL REPORT HERE*****************/
+                    ReportActivity.dismissAllDialogs(getFragmentManager());
+                }
+            });
         }
 
         builder.setTitle(name);
-        //builder.setMessage(question);
 
         return builder.create();
     }
 
-    /*@Override
+    @Override
     public void onDestroy() {
         super.onDestroy();
-        ReportActivity.questionNum-=3;
-        ReportActivity.requestNum-=3;
-        ReportActivity.resendLastRequest((ReportActivity)getActivity());
-    }*/
+        if (type.trim().equalsIgnoreCase("boolean") || type.trim().equalsIgnoreCase("number")) {
+            try {
+                for (int i = 0; i < ReportActivity.responseLists.get(0).elements.size(); i++) {
+                    if (ReportActivity.questionList.get(ReportActivity.questionNum - 1).id.equals(ReportActivity.responseLists.get(0).elements.get(i).id)) {
+                        ReportActivity.responseLists.get(0).elements.get(i).visited = false;
+                    }
+                }
+                ReportActivity.questionList.elements.remove(ReportActivity.questionNum - 1);
+
+                ReportActivity.questionNum--;
+                if (ReportActivity.questionNum <= 0) {
+                    ReportActivity.state = ReportActivity.State.ISSUES;
+                    ReportActivity.currentID = "";
+                } else {
+                    ReportActivity.currentID = ReportActivity.questionList.get(ReportActivity.questionNum - 1).id;
+                }
+            }catch (Exception e){
+                e.printStackTrace();
+            }
+        } else if (type.trim().equalsIgnoreCase("pick")) {
+
+            try {
+                ReportActivity.responseLists.get(0).elements.clear();
+                ReportActivity.questionList.elements.clear();
+            }catch (Exception e){
+                e.printStackTrace();
+            }
+            ReportActivity.state = ReportActivity.State.INITIAL;
+        }
+    }
 }
