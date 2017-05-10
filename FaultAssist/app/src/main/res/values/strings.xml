@@ -12,4 +12,9 @@
     <string name="ask_if_solved">Did this solve the problem?</string>
     <string name="thanks">Thank you for using our app. We are glad we could help with your work. To upload your report click the button below.</string>
     <string name="close">Close</string>
+    <string name="ok">Ok</string>
+    <string name="number_input">Write the value here</string>
+    <string name="failed">Sorry, the program failed to solve your issue with the answers you gave. Please contact a technician.</string>
+    <string name="sorry">We are sorry for not helping with your work. Maybe a technician could help you. Please finish the report by clicking the button below to help us improve the system.</string>
+    <string name="report_info">Welcome to the FaultAssist project. This program will try to solve the issues you are reporting by asking you about the machines. To start with the report, please scan the machine\'s QR code.</string>
 </resources>

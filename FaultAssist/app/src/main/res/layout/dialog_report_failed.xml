@@ -7,7 +7,7 @@
     android:padding="10dp">
 
     <TextView
-        android:id="@+id/text_view_solved"
+        android:id="@+id/text_view_failed"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:textColor="@color/black"
@@ -16,7 +16,7 @@
         android:layout_weight="1" />
 
     <TextView
-        android:id="@+id/text_view_thanks"
+        android:id="@+id/text_view_sorry"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:textColor="@color/colorPrimary"
@@ -24,7 +24,7 @@
         android:padding="10dp"
         android:layout_gravity="left"
         android:layout_weight="1"
-        android:text="@string/thanks"/>
+        android:text="@string/sorry"/>
 
     <LinearLayout
         android:layout_width="match_parent"

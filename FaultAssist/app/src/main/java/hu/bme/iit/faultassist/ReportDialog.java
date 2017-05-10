@@ -11,6 +11,7 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
 
@@ -22,16 +23,18 @@ public class ReportDialog extends DialogFragment {
     String name;
     String text;
     String type;
+    String value_type;
     ListView listView;
     List<ReturnValues> issues;
 
 
-    static ReportDialog newInstance(String name, String type, String text, List<ReturnValues> list) {
+    static ReportDialog newInstance(String name, String type, String text, String value_type, List<ReturnValues> list) {
         ReportDialog f = new ReportDialog();
         f.name = name;
         f.text = text;
         f.type = type;
         f.issues = list;
+        f.value_type = value_type;
         return f;
     }
 
@@ -98,6 +101,24 @@ public class ReportDialog extends DialogFragment {
         } else if (type.trim().equalsIgnoreCase("number")) {
             View v = getActivity().getLayoutInflater().inflate(R.layout.dialog_report_number, null);
             builder.setView(v);
+
+            TextView text_view = (TextView) v.findViewById(R.id.text_view_report);
+            TextView value_type_text_view = (TextView) v.findViewById(R.id.value_type__text_view_report_dialog);
+            final EditText editText = (EditText) v.findViewById(R.id.number_input_report_dialog);
+            Button ok_btn = (Button) v.findViewById(R.id.ok_btn_report_dialog);
+
+            text_view.setText(text);
+            value_type_text_view.setText(value_type);
+
+            ok_btn.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if(editText.getText().toString().length()>0){
+                        ((ReportActivity) getActivity()).answerProcessNumber(editText.getText().toString());
+                    }
+                }
+            });
+
         } else if (type.trim().equalsIgnoreCase("suggestion")) {
             View v = getActivity().getLayoutInflater().inflate(R.layout.dialog_report_suggestion, null);
             builder.setView(v);
@@ -123,6 +144,7 @@ public class ReportDialog extends DialogFragment {
         } else if (type.trim().equalsIgnoreCase("solved")) {
             View v = getActivity().getLayoutInflater().inflate(R.layout.dialog_report_solved, null);
             builder.setView(v);
+
             Button close_btn = (Button) v.findViewById(R.id.close_btn_report_dialog);
             TextView textView = (TextView) v.findViewById(R.id.text_view_solved);
             textView.setText(text);
@@ -130,7 +152,22 @@ public class ReportDialog extends DialogFragment {
             close_btn.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    /************************************************************************************CALL REPORT HERE*****************/
+                    ((ReportActivity) getActivity()).report();
+                    ReportActivity.dismissAllDialogs(getFragmentManager());
+                }
+            });
+        } else if (type.trim().equalsIgnoreCase("failed")) {
+            View v = getActivity().getLayoutInflater().inflate(R.layout.dialog_report_failed, null);
+            builder.setView(v);
+
+            Button close_btn = (Button) v.findViewById(R.id.close_btn_report_dialog);
+            TextView textView = (TextView) v.findViewById(R.id.text_view_failed);
+            textView.setText(text);
+
+            close_btn.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    ((ReportActivity) getActivity()).report();
                     ReportActivity.dismissAllDialogs(getFragmentManager());
                 }
             });
@@ -151,6 +188,7 @@ public class ReportDialog extends DialogFragment {
                         ReportActivity.responseLists.get(0).elements.get(i).visited = false;
                     }
                 }
+                ReportActivity.questionList.elements.get(ReportActivity.questionNum - 2).answer = "";
                 ReportActivity.questionList.elements.remove(ReportActivity.questionNum - 1);
 
                 ReportActivity.questionNum--;
@@ -172,6 +210,8 @@ public class ReportDialog extends DialogFragment {
                 e.printStackTrace();
             }
             ReportActivity.state = ReportActivity.State.INITIAL;
+        } else if (type.trim().equalsIgnoreCase("suggestion")){
+            ReportActivity.state = ReportActivity.State.QUESTION;
         }
     }
 }
