@@ -152,7 +152,7 @@ public class ReportDialog extends DialogFragment {
             close_btn.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    ((ReportActivity) getActivity()).report();
+                    ((ReportActivity) getActivity()).report(true);
                     ReportActivity.dismissAllDialogs(getFragmentManager());
                 }
             });
@@ -167,7 +167,7 @@ public class ReportDialog extends DialogFragment {
             close_btn.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    ((ReportActivity) getActivity()).report();
+                    ((ReportActivity) getActivity()).report(false);
                     ReportActivity.dismissAllDialogs(getFragmentManager());
                 }
             });
@@ -212,6 +212,8 @@ public class ReportDialog extends DialogFragment {
             ReportActivity.state = ReportActivity.State.INITIAL;
         } else if (type.trim().equalsIgnoreCase("suggestion")){
             ReportActivity.state = ReportActivity.State.QUESTION;
+        } else if (type.trim().equalsIgnoreCase("solved")){
+            ReportActivity.state = ReportActivity.State.INITIAL;
         }
     }
 }

@@ -70,7 +70,9 @@ public class ReportActivity extends AppCompatActivity implements ZXingScannerVie
         HEADS,
         ISSUES,
         QUESTION,
-        SUGGESTION
+        SUGGESTION,
+        REPORTING_START,
+        REPORTING
     }
 
     public static State state;
@@ -470,7 +472,7 @@ public class ReportActivity extends AppCompatActivity implements ZXingScannerVie
         });
     }
 
-    public void report() {
+    public void report(boolean b) {
         List<String> report_route = new ArrayList<>();
         for (int i = 0; i < questionList.elements.size(); i++) {
             if (questionList.elements.get(i).type.trim().equalsIgnoreCase("boolean")) {
@@ -484,23 +486,41 @@ public class ReportActivity extends AppCompatActivity implements ZXingScannerVie
                 }
             }
         }
-        /*******************************************************REPLACE WITH REPORTING****/
+
         System.out.println("ROUTE:");
-        System.out.println(headID);
+        List<String> route = new ArrayList<>();
+        route.add(headID);
         for (int i = 0; i < questionList.elements.size(); i++) {
-            System.out.println(questionList.get(i).id);
+            route.add(questionList.get(i).id);
         }
+        for (int i = 0; i <= route.size()-1; i++) {
+            System.out.println(route.get(i));
+        }
+
         System.out.println("TRUE ROUTE:");
         List<String> true_route = new ArrayList<>();
         String[] s = currentID.split("_");
         for (int i = 0; i < s.length; i++) {
-            true_route.add(currentID);
+            true_route.add(0, currentID);
             rollBackID();
         }
-        for (int i = 1; i <= true_route.size(); i++) {
-            System.out.println(true_route.get(true_route.size() - i));
+        for (int i = 0; i <= true_route.size()-1; i++) {
+            System.out.println(true_route.get(i));
         }
-        report_list = true_route;
+        if (b) {
+            report_list = true_route;
+        } else {
+            report_list = route;
+        }
+
+        System.out.println("REPORT ROUTE:");
+        for (int i = 0; i <= report_list.size()-1; i++) {
+            System.out.println(report_list.get(i));
+        }
+
+        /*state = State.REPORTING_START;
+        Networking.post(Networking.query_link, SQL("insert", "reports", ));*/
+
     }
 
     public static void dismissAllDialogs(FragmentManager manager) {
@@ -528,6 +548,5 @@ public class ReportActivity extends AppCompatActivity implements ZXingScannerVie
         ReportActivity.questionList.elements.clear();
         ReportActivity.responseLists.clear();
         ReportActivity.questionNum = 0;
-        ReportActivity.state = State.INITIAL;
     }
 }
