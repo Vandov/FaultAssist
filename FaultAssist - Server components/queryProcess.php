@@ -1,3 +1,4 @@
+
 <?php
 
 header('Content-Type: application/json; charset=utf-8');
@@ -12,6 +13,7 @@ $table = $data["table"];
 $values = $data["values"];
 $selection = $data["selection"];
 $specification = $data["specification"];
+$columns = $data["columns"];
 
 function utf8ize($d) {
     if (is_array($d)) {
@@ -32,7 +34,7 @@ if ($conn->connect_error) {
          die("Connection failed: " . $conn->connect_error);
 }else{
         if($command == "insert"){
-                $query = "INSERT INTO $table VALUES ($values)";
+                $query = "INSERT INTO $table ($columns) VALUES ($values)";
         }else if($command == "select"){
                  $query = "SELECT $selection FROM $table WHERE $specification";
         }
