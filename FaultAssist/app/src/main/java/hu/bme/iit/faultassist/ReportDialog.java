@@ -153,7 +153,6 @@ public class ReportDialog extends DialogFragment {
                 @Override
                 public void onClick(View v) {
                     ((ReportActivity) getActivity()).report(true);
-                    ReportActivity.dismissAllDialogs(getFragmentManager());
                 }
             });
         } else if (type.trim().equalsIgnoreCase("failed")) {
@@ -168,7 +167,6 @@ public class ReportDialog extends DialogFragment {
                 @Override
                 public void onClick(View v) {
                     ((ReportActivity) getActivity()).report(false);
-                    ReportActivity.dismissAllDialogs(getFragmentManager());
                 }
             });
         }

@@ -47,6 +47,7 @@ public class ReportActivity extends AppCompatActivity implements ZXingScannerVie
     static JsonPrimitive pass;
     static JsonPrimitive command;
     static JsonPrimitive table;
+    static JsonPrimitive columns;
     static JsonPrimitive values;
     static JsonPrimitive selection;
     static JsonPrimitive specification;
@@ -58,6 +59,7 @@ public class ReportActivity extends AppCompatActivity implements ZXingScannerVie
     static QuestionsList questionList = new QuestionsList();
     private String machineID = "";
     private String machineType = "";
+    private String reportID = "";
     static String currentID = "";
     private String headID = "";
     private String issuesSelection = "id, cause, status";
@@ -72,6 +74,7 @@ public class ReportActivity extends AppCompatActivity implements ZXingScannerVie
         QUESTION,
         SUGGESTION,
         REPORTING_START,
+        REPORTING_GETTING_ID,
         REPORTING
     }
 
@@ -124,10 +127,11 @@ public class ReportActivity extends AppCompatActivity implements ZXingScannerVie
         });
     }
 
-    public static String SQL(String mCommand, String mTable, String mValues, String mSelection, String mSpecification) {
+    public static String SQL(String mCommand, String mTable, String mColumns, String mValues, String mSelection, String mSpecification) {
 
         command = new JsonPrimitive(mCommand);
         table = new JsonPrimitive(mTable);
+        columns = new JsonPrimitive(mColumns);
         values = new JsonPrimitive(mValues);
         selection = new JsonPrimitive(mSelection);
         specification = new JsonPrimitive(mSpecification);
@@ -139,6 +143,7 @@ public class ReportActivity extends AppCompatActivity implements ZXingScannerVie
         object.add("password", pass);
         object.add("command", command);
         object.add("table", table);
+        object.add("columns", columns);
         object.add("values", values);
         object.add("selection", selection);
         object.add("specification", specification);
@@ -247,6 +252,18 @@ public class ReportActivity extends AppCompatActivity implements ZXingScannerVie
                     e.printStackTrace();
                 }
             }
+        } else if (state == State.REPORTING_START) {
+            if (Jarray == null) {
+                Networking.post(Networking.query_link, SQL("select", "reports", "", "", "id", "user ='" + getIntent().getStringExtra("username") + "' ORDER BY UNIX_TIMESTAMP(time) DESC"), this);
+            }
+        } else if (state == State.REPORTING_GETTING_ID) {
+            if (Jarray != null) {
+                try {
+                    reportID = Jarray.getJSONObject(0).get("id").toString();
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
         }
 
 
@@ -259,7 +276,7 @@ public class ReportActivity extends AppCompatActivity implements ZXingScannerVie
             case INITIAL:
                 try {
                     state = State.TYPE;
-                    Networking.post(Networking.query_link, SQL("select", "machines", "", "type", "id = '" + machineID + "'"), this);
+                    Networking.post(Networking.query_link, SQL("select", "machines", "", "", "type", "id = '" + machineID + "'"), this);
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -267,7 +284,7 @@ public class ReportActivity extends AppCompatActivity implements ZXingScannerVie
             case TYPE:
                 try {
                     state = State.HEADS;
-                    Networking.post(Networking.query_link, SQL("select", machineType + "_ISSUES", "", issuesSelection, "status = 'Active' AND " + generateSelectID()), this);
+                    Networking.post(Networking.query_link, SQL("select", machineType + "_ISSUES", "", "", issuesSelection, "status = 'Active' AND " + generateSelectID()), this);
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -285,6 +302,25 @@ public class ReportActivity extends AppCompatActivity implements ZXingScannerVie
                 break;
             case SUGGESTION:
                 showSuggestion();
+                break;
+            case REPORTING_START:
+                state = State.REPORTING_GETTING_ID;
+                break;
+            case REPORTING_GETTING_ID:
+                state = State.REPORTING;
+                nextStep();
+                break;
+            case REPORTING:
+                try {
+                    if (report_list.size() > 0) {
+                        Networking.post(Networking.query_link, SQL("insert", "report_events", "id, node_id", "'" + reportID + "'" + ", '" + report_list.get(0) + "'", "", ""), this);
+                        report_list.remove(0);
+                    }else{
+                        ReportActivity.dismissAllDialogs(getSupportFragmentManager());
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
                 break;
         }
     }
@@ -399,7 +435,7 @@ public class ReportActivity extends AppCompatActivity implements ZXingScannerVie
         if (pos >= 0) {
             IssueElement element = responseLists.get(0).elements.get(pos);
             try {
-                Networking.post(Networking.query_link, SQL("select", machineType + "_QUESTIONS", "", questionSelection, "id = '" + element.id + "'"), this);
+                Networking.post(Networking.query_link, SQL("select", machineType + "_QUESTIONS", "", "", questionSelection, "id = '" + element.id + "'"), this);
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -435,7 +471,7 @@ public class ReportActivity extends AppCompatActivity implements ZXingScannerVie
         currentID = id;
         headID = id;
         try {
-            Networking.post(Networking.query_link, SQL("select", machineType + "_ISSUES", "", issuesSelection, "status = 'Active' AND " + generateSelectID()), this);
+            Networking.post(Networking.query_link, SQL("select", machineType + "_ISSUES", "", "", issuesSelection, "status = 'Active' AND " + generateSelectID()), this);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -453,7 +489,9 @@ public class ReportActivity extends AppCompatActivity implements ZXingScannerVie
         dialog.show(getSupportFragmentManager(), "dialog");
     }
 
-    /*************************************************************************************************************MAYBE IMPLEMENT****/
+    /*************************************************************************************************************
+     * MAYBE IMPLEMENT
+     ****/
     private void showDialog() {
         if (!progressDialog.isShowing())
             progressDialog.show();
@@ -493,7 +531,7 @@ public class ReportActivity extends AppCompatActivity implements ZXingScannerVie
         for (int i = 0; i < questionList.elements.size(); i++) {
             route.add(questionList.get(i).id);
         }
-        for (int i = 0; i <= route.size()-1; i++) {
+        for (int i = 0; i <= route.size() - 1; i++) {
             System.out.println(route.get(i));
         }
 
@@ -504,22 +542,30 @@ public class ReportActivity extends AppCompatActivity implements ZXingScannerVie
             true_route.add(0, currentID);
             rollBackID();
         }
-        for (int i = 0; i <= true_route.size()-1; i++) {
+        for (int i = 0; i <= true_route.size() - 1; i++) {
             System.out.println(true_route.get(i));
         }
+
+        String solvedStateText;
         if (b) {
             report_list = true_route;
+            solvedStateText = "SOLVED";
         } else {
             report_list = route;
+            solvedStateText = "UNSOLVED";
         }
 
         System.out.println("REPORT ROUTE:");
-        for (int i = 0; i <= report_list.size()-1; i++) {
+        for (int i = 0; i <= report_list.size() - 1; i++) {
             System.out.println(report_list.get(i));
         }
 
-        /*state = State.REPORTING_START;
-        Networking.post(Networking.query_link, SQL("insert", "reports", ));*/
+        state = State.REPORTING_START;
+        try {
+            Networking.post(Networking.query_link, SQL("insert", "reports", "user, status", "'" + getIntent().getStringExtra("username") + "', '" + solvedStateText + "'", "", ""), this);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
     }
 
