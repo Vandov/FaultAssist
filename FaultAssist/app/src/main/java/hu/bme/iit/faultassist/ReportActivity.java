@@ -28,7 +28,6 @@ import org.json.JSONException;
 
 import java.io.IOException;
 import java.net.URLDecoder;
-import java.nio.DoubleBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -63,7 +62,7 @@ public class ReportActivity extends AppCompatActivity implements ZXingScannerVie
     static String currentID = "";
     private String headID = "";
     private String issuesSelection = "id, cause, status";
-    private String questionSelection = "id, question, question_type, expected, value_type, interval_bottom, interval_top, leaf_solution";
+    private String questionSelection = "id, question, question_type, expected, unit, interval_bottom, interval_top, leaf_solution";
     static int questionNum = 0;
 
     public enum State {
@@ -118,7 +117,7 @@ public class ReportActivity extends AppCompatActivity implements ZXingScannerVie
         proceed.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (text != null) {
+                if (machineID.length()>0) {
                     nextStep();
                 } else {
                     toast("Please scan the QR code of the machine before continuing");
@@ -245,7 +244,7 @@ public class ReportActivity extends AppCompatActivity implements ZXingScannerVie
                             Jarray.getJSONObject(0).get("interval_top").toString(),
                             Jarray.getJSONObject(0).get("interval_bottom").toString(),
                             Jarray.getJSONObject(0).get("leaf_solution").toString(),
-                            Jarray.getJSONObject(0).get("value_type").toString());
+                            Jarray.getJSONObject(0).get("unit").toString());
 
 
                 } catch (JSONException e) {
@@ -417,7 +416,7 @@ public class ReportActivity extends AppCompatActivity implements ZXingScannerVie
         if (question.type.trim().equalsIgnoreCase("boolean")) {
             questionList.get(questionNum - 1).answer = "";
         }
-        displayDialog("Question " + questionNum + ":", question.type, question.question, question.value_type, null);
+        displayDialog("Question " + questionNum + ":", question.type, question.question, question.unit, null);
     }
 
     private String generateSelectID() {
@@ -477,7 +476,7 @@ public class ReportActivity extends AppCompatActivity implements ZXingScannerVie
         }
     }
 
-    private void displayDialog(String name, String type, String text, String value_type, List list) {
+    private void displayDialog(String name, String type, String text, String unit, List list) {
         FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
         Fragment prev = getSupportFragmentManager().findFragmentByTag("dialog");
         if (prev != null) {
@@ -485,7 +484,7 @@ public class ReportActivity extends AppCompatActivity implements ZXingScannerVie
         }
         ft.addToBackStack(null);
 
-        DialogFragment dialog = ReportDialog.newInstance(name, type, text, value_type, list);
+        DialogFragment dialog = ReportDialog.newInstance(name, type, text, unit, list);
         dialog.show(getSupportFragmentManager(), "dialog");
     }
 

@@ -23,18 +23,18 @@ public class ReportDialog extends DialogFragment {
     String name;
     String text;
     String type;
-    String value_type;
+    String unit;
     ListView listView;
     List<ReturnValues> issues;
 
 
-    static ReportDialog newInstance(String name, String type, String text, String value_type, List<ReturnValues> list) {
+    static ReportDialog newInstance(String name, String type, String text, String unit, List<ReturnValues> list) {
         ReportDialog f = new ReportDialog();
         f.name = name;
         f.text = text;
         f.type = type;
         f.issues = list;
-        f.value_type = value_type;
+        f.unit = unit;
         return f;
     }
 
@@ -80,7 +80,7 @@ public class ReportDialog extends DialogFragment {
             no_btn.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    if (ReportActivity.questionList.get(ReportActivity.questionNum - 1).expected.trim().equalsIgnoreCase("nem")) {
+                    if (ReportActivity.questionList.get(ReportActivity.questionNum - 1).expected.trim().equalsIgnoreCase("no")) {
                         ((ReportActivity) getActivity()).answerProcessBoolean(true);
                     } else {
                         ((ReportActivity) getActivity()).answerProcessBoolean(false);
@@ -91,7 +91,7 @@ public class ReportDialog extends DialogFragment {
             yes_btn.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    if (ReportActivity.questionList.get(ReportActivity.questionNum - 1).expected.trim().equalsIgnoreCase("igen")) {
+                    if (ReportActivity.questionList.get(ReportActivity.questionNum - 1).expected.trim().equalsIgnoreCase("yes")) {
                         ((ReportActivity) getActivity()).answerProcessBoolean(true);
                     } else {
                         ((ReportActivity) getActivity()).answerProcessBoolean(false);
@@ -108,7 +108,7 @@ public class ReportDialog extends DialogFragment {
             Button ok_btn = (Button) v.findViewById(R.id.ok_btn_report_dialog);
 
             text_view.setText(text);
-            value_type_text_view.setText(value_type);
+            value_type_text_view.setText(unit);
 
             ok_btn.setOnClickListener(new View.OnClickListener() {
                 @Override

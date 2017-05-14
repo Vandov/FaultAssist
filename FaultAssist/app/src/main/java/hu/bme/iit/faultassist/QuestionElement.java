@@ -9,6 +9,6 @@ public class QuestionElement {
     String top_interval;
     String bottom_interval;
     String solution;
-    String value_type;
+    String unit;
     Boolean solved = false;
 }

@@ -7,7 +7,7 @@ public class QuestionsList {
     List<QuestionElement> elements = new ArrayList<>();
 
     public void add(String id, String type, String question, String expected, String top_interval,
-                    String bottom_interval, String solution, String value_type) {
+                    String bottom_interval, String solution, String unit) {
         QuestionElement element = new QuestionElement();
         element.id = id;
         element.type = type;
@@ -16,7 +16,7 @@ public class QuestionsList {
         element.top_interval = top_interval;
         element.bottom_interval = bottom_interval;
         element.solution = solution;
-        element.value_type = value_type;
+        element.unit = unit;
         elements.add(element);
     }
 
