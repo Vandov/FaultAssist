@@ -1,5 +1,6 @@
 package hu.bme.iit.faultassist;
 
+/** Storing questions data. Database dependent. **/
 public class QuestionElement {
     String id;
     String type;
@@ -10,5 +11,4 @@ public class QuestionElement {
     String bottom_interval;
     String solution;
     String unit;
-    Boolean solved = false;
 }

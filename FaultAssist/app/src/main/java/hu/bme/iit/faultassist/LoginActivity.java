@@ -15,13 +15,23 @@ import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.Response;
 
+/**This activity is the first activity in the process.
+ * Allows the user to log in with username and password.**/
 public class LoginActivity extends AppCompatActivity implements Callback {
+
+    /** Elements in the view. **/
     EditText userID;
     EditText password;
     Button sign_in;
     Button register;
+
+    /** Loading/process dialog.
+     *  Showing when communicating with the server. **/
     ProgressDialog progressDialog;
 
+
+    /** Setting the view, registering the view elements,setting the progress dialog,
+     *  initializing the Network class elements, setting on click listeners. **/
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -37,6 +47,10 @@ public class LoginActivity extends AppCompatActivity implements Callback {
 
         Networking.initialize();
 
+        /** If sign in button clicked, adding the password and username to a Json object,
+         *  which will be later sent to the server as a String.
+         *  TODO: Switch to SQL function if it is moved to Network as a static method.
+         *  To show that the activity is working, showing a progress dialog with a message.**/
         sign_in.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -63,6 +77,7 @@ public class LoginActivity extends AppCompatActivity implements Callback {
             }
         });
 
+        /** If register button pushed, stating the registration activity. **/
         register.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -74,12 +89,16 @@ public class LoginActivity extends AppCompatActivity implements Callback {
 
 
 
+    /** OkHttp's function. Called when the connection is not possible, server is unreachable. Hiding progress dialog. **/
     @Override
     public void onFailure(Call call, IOException e) {
         hideDialog();
         toast("Can't connect to server");
     }
 
+    /** OkHttp's function. Called when the connection established and the server made a response. Hiding progress dialog.
+     *  The server answer is in the response body. (basically what the server echoed back, calibrate on server side).
+     *  If the answer contains Success, we start the report activity, and giving it the username and password. **/
     @Override
     public void onResponse(Call call, Response response) throws IOException {
         hideDialog();
@@ -94,15 +113,20 @@ public class LoginActivity extends AppCompatActivity implements Callback {
         }
     }
 
+    /** Showing progress dialog, if it's not shown already. **/
     private void showDialog() {
         if (!progressDialog.isShowing())
             progressDialog.show();
     }
+
+    /** Hiding progress dialog, if it's shown already. **/
     private void hideDialog() {
         if (progressDialog.isShowing())
             progressDialog.dismiss();
     }
 
+
+    /** Showing a toast message. Parameter is the message. **/
     private void toast(final String s){
         this.runOnUiThread(new Runnable() {
             public void run() {
@@ -111,6 +135,7 @@ public class LoginActivity extends AppCompatActivity implements Callback {
         });
     }
 
+    /** Making password an empty string, if the activity is not in focus. **/
     @Override
     protected void onPause(){
         super.onPause();
